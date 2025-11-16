@@ -6,17 +6,52 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Laravel\Facades\Image;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
+use App\Exports\CategoriesExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CategoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $categories = Category::withCount('products')
-                             ->latest()
-                             ->paginate(10);
+        $query = Category::withCount('products');
 
-        return view('admin.categories.index', compact('categories'));
+        // Search
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('description', 'like', '%' . $search . '%');
+            });
+        }
+
+        // Filter by status
+        if ($request->has('status') && $request->status) {
+            $isActive = $request->status === 'active' ? 1 : 0;
+            $query->where('is_active', $isActive);
+        }
+
+        // Sort
+        $query->latest();
+
+        // Handle Export
+        if ($request->has('export') && $request->export === 'excel') {
+            $categories = $query->get();
+            return Excel::download(new CategoriesExport($categories), 'categories-' . date('Y-m-d') . '.xlsx');
+        }
+
+        $categories = $query->paginate(10)->withQueryString();
+
+        // Statistics
+        $stats = [
+            'total_categories' => Category::count(),
+            'active_categories' => Category::where('is_active', true)->count(),
+            'total_products' => \App\Models\Product::count(),
+            'empty_categories' => Category::doesntHave('products')->count(),
+        ];
+
+        return view('admin.categories.index', compact('categories', 'stats'));
     }
 
     public function create()
@@ -43,12 +78,10 @@ class CategoryController extends Controller
             $image = $request->file('image');
             $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
             
-            // Resize and save image
-            $resizedImage = Image::read($image->getPathname())
-                                 ->resize(400, 400, function ($constraint) {
-                                     $constraint->aspectRatio();
-                                     $constraint->upsize();
-                                 });
+            // Resize and save image with v3 syntax
+            $manager = new ImageManager(new Driver());
+            $resizedImage = $manager->read($image->getPathname());
+            $resizedImage->scale(width: 400, height: 400);
             
             $imagePath = 'categories/' . $imageName;
             Storage::disk('public')->put($imagePath, $resizedImage->encode());
@@ -58,7 +91,7 @@ class CategoryController extends Controller
         $category->save();
 
         return redirect()->route('admin.categories.index')
-                        ->with('success', 'Kategori berhasil ditambahkan.');
+                        ->with('success', 'Category successfully created.');
     }
 
     public function show(Category $category)
@@ -98,12 +131,10 @@ class CategoryController extends Controller
             $image = $request->file('image');
             $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
             
-            // Resize and save image
-            $resizedImage = Image::read($image->getPathname())
-                                 ->resize(400, 400, function ($constraint) {
-                                     $constraint->aspectRatio();
-                                     $constraint->upsize();
-                                 });
+            // Resize and save image with v3 syntax
+            $manager = new ImageManager(new Driver());
+            $resizedImage = $manager->read($image->getPathname());
+            $resizedImage->scale(width: 400, height: 400);
             
             $imagePath = 'categories/' . $imageName;
             Storage::disk('public')->put($imagePath, $resizedImage->encode());
@@ -113,7 +144,7 @@ class CategoryController extends Controller
         $category->save();
 
         return redirect()->route('admin.categories.index')
-                        ->with('success', 'Kategori berhasil diperbarui.');
+                        ->with('success', 'Category successfully updated.');
     }
 
     public function destroy(Category $category)
@@ -121,7 +152,7 @@ class CategoryController extends Controller
         // Check if category has products
         if ($category->products()->count() > 0) {
             return redirect()->route('admin.categories.index')
-                           ->with('error', 'Kategori tidak dapat dihapus karena masih memiliki produk.');
+                           ->with('error', 'Cannot delete category that has products.');
         }
 
         // Delete image
@@ -132,6 +163,6 @@ class CategoryController extends Controller
         $category->delete();
 
         return redirect()->route('admin.categories.index')
-                        ->with('success', 'Kategori berhasil dihapus.');
+                        ->with('success', 'Category successfully deleted.');
     }
 }

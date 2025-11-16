@@ -1,12 +1,13 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\ProductController;
-use App\Http\Controllers\Admin\UserController;  // Tambahkan import ini
-use App\Http\Controllers\Frontend\HomeController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Frontend\HomeController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\DashboardController;
 
 /*------------------------------------------ Frontend Routes ------------------------------------------*/
 
@@ -14,9 +15,9 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // Product Routes (nanti)
 Route::prefix('products')->name('frontend.products.')->group(function () {
-    Route::get('/', [Frontend\ProductController::class, 'index'])->name('index');
-    Route::get('/category/{category:slug}', [Frontend\ProductController::class, 'category'])->name('category');
-    Route::get('/{product:slug}', [Frontend\ProductController::class, 'show'])->name('show');
+    // Route::get('/', [Frontend\ProductController::class, 'index'])->name('index');
+    // Route::get('/category/{category:slug}', [Frontend\ProductController::class, 'category'])->name('category');
+    // Route::get('/{product:slug}', [Frontend\ProductController::class, 'show'])->name('show');
 });
 
 /* Authentication Routes */
@@ -32,31 +33,31 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Cart Routes (nanti)
     Route::prefix('cart')->name('frontend.cart.')->group(function () {
-        Route::get('/', [Frontend\CartController::class, 'index'])->name('index');
-        Route::post('/add', [Frontend\CartController::class, 'add'])->name('add');
-        Route::put('/update/{cart}', [Frontend\CartController::class, 'update'])->name('update');
-        Route::delete('/remove/{cart}', [Frontend\CartController::class, 'remove'])->name('remove');
-        Route::delete('/clear', [Frontend\CartController::class, 'clear'])->name('clear');
+        // Route::get('/', [Frontend\CartController::class, 'index'])->name('index');
+        // Route::post('/add', [Frontend\CartController::class, 'add'])->name('add');
+        // Route::put('/update/{cart}', [Frontend\CartController::class, 'update'])->name('update');
+        // Route::delete('/remove/{cart}', [Frontend\CartController::class, 'remove'])->name('remove');
+        // Route::delete('/clear', [Frontend\CartController::class, 'clear'])->name('clear');
     });
     
     // Checkout Routes (nanti)
     Route::prefix('checkout')->name('frontend.checkout.')->group(function () {
-        Route::get('/', [Frontend\CheckoutController::class, 'index'])->name('index');
-        Route::post('/process', [Frontend\CheckoutController::class, 'process'])->name('process');
+        // Route::get('/', [Frontend\CheckoutController::class, 'index'])->name('index');
+        // Route::post('/process', [Frontend\CheckoutController::class, 'process'])->name('process');
     });
     
     // Order Routes (nanti)
     Route::prefix('orders')->name('frontend.orders.')->group(function () {
-        Route::get('/', [Frontend\OrderController::class, 'index'])->name('index');
-        Route::get('/{order}', [Frontend\OrderController::class, 'show'])->name('show');
-        Route::post('/{order}/cancel', [Frontend\OrderController::class, 'cancel'])->name('cancel');
+        // Route::get('/', [Frontend\OrderController::class, 'index'])->name('index');
+        // Route::get('/{order}', [Frontend\OrderController::class, 'show'])->name('show');
+        // Route::post('/{order}/cancel', [Frontend\OrderController::class, 'cancel'])->name('cancel');
     });
     
     // Payment Routes (nanti)
     Route::prefix('payment')->name('frontend.payment.')->group(function () {
-        Route::get('/success', [Frontend\PaymentController::class, 'success'])->name('success');
-        Route::get('/failure', [Frontend\PaymentController::class, 'failure'])->name('failure');
-        Route::post('/callback', [Frontend\PaymentController::class, 'callback'])->name('callback');
+        // Route::get('/success', [Frontend\PaymentController::class, 'success'])->name('success');
+        // Route::get('/failure', [Frontend\PaymentController::class, 'failure'])->name('failure');
+        // Route::post('/callback', [Frontend\PaymentController::class, 'callback'])->name('callback');
     });
 });
 
@@ -73,13 +74,14 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::resource('products', ProductController::class);
     Route::post('/products/bulk-action', [ProductController::class, 'bulkAction'])->name('products.bulk-action');
 
-    // User Management - Perbaiki namespace ini
+    // User Management
     Route::resource('users', UserController::class);
-    Route::post('/api/users/{user}/verify-email', [UserController::class, 'verifyEmail'])->name('api.users.verify-email');
+    Route::post('/users/{user}/verify-email', [UserController::class, 'verifyEmail'])->name('users.verify-email');
 
-    // Order Management (nanti)
-    // Route::resource('orders', Admin\OrderController::class)->except(['create', 'store']);
-
+    // Order Management - Temporary placeholder route
+    Route::resource('orders', OrderController::class);
+    Route::post('/orders/bulk-action', [OrderController::class, 'bulkAction'])->name('orders.bulk-action');
+    
     // Reports (nanti)
     // Route::prefix('reports')->name('reports.')->group(function () {
     //     Route::get('/sales', [Admin\ReportController::class, 'sales'])->name('sales');
@@ -109,7 +111,7 @@ Route::get('/dashboard', function () {
 /*------------------------------------------ API Routes untuk Payment Gateway ------------------------------------------*/
 
 // Payment Webhook (tidak perlu auth)
-Route::post('/webhook/duitku', [Frontend\PaymentController::class, 'webhook'])->name('webhook.duitku');
+// Route::post('/webhook/duitku', [Frontend\PaymentController::class, 'webhook'])->name('webhook.duitku');
 
 /*------------------------------------------ Admin API Routes (buat AJAX calls) ------------------------------------------*/
 

@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Exports\UsersExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Spatie\Permission\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Carbon\Carbon;
 
 class UserController extends Controller
 {
@@ -37,10 +40,29 @@ class UserController extends Controller
         $sortDir = $request->get('sort_dir', 'desc');
         $query->orderBy($sortBy, $sortDir);
         
-        $users = $query->paginate(15)->withQueryString();
+        $users = $query->paginate(10)->withQueryString();
         $roles = Role::all();
         
-        return view('admin.users.index', compact('users', 'roles', 'request'));
+        // Statistics
+        $stats = [
+            'total_users' => User::count(),
+            'active_users' => User::whereNotNull('email_verified_at')
+                                 ->where('created_at', '>=', Carbon::now()->subDays(30))
+                                 ->count(),
+            'new_this_month' => User::whereMonth('created_at', Carbon::now()->month)
+                                   ->whereYear('created_at', Carbon::now()->year)
+                                   ->count(),
+            'suspended' => 0, // Add suspended count if you have this field
+            'admins' => User::role(['admin', 'super-admin'])->count(),
+        ];
+
+        // Handle Export
+        if ($request->has('export') && $request->export === 'excel') {
+            $users = $query->get();
+            return Excel::download(new UsersExport($users), 'users-' . date('Y-m-d') . '.xlsx');
+        }
+        
+        return view('admin.users.index', compact('users', 'roles', 'request', 'stats'));
     }
 
     public function create()
@@ -72,7 +94,7 @@ class UserController extends Controller
         $user->assignRole($request->role);
 
         return redirect()->route('admin.users.index')
-                        ->with('success', 'User berhasil ditambahkan.');
+                        ->with('success', 'User created successfully.');
     }
 
     public function show(User $user)
@@ -124,25 +146,25 @@ class UserController extends Controller
         $user->syncRoles([$request->role]);
 
         return redirect()->route('admin.users.index')
-                        ->with('success', 'User berhasil diperbarui.');
+                        ->with('success', 'User updated successfully.');
     }
 
     public function destroy(User $user)
     {
         if ($user->id === auth()->id()) {
             return redirect()->route('admin.users.index')
-                           ->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
+                           ->with('error', 'You cannot delete your own account.');
         }
 
         if ($user->orders()->count() > 0) {
             return redirect()->route('admin.users.index')
-                           ->with('error', 'User tidak dapat dihapus karena memiliki riwayat pesanan.');
+                           ->with('error', 'User cannot be deleted because they have order history.');
         }
 
         $user->delete();
 
         return redirect()->route('admin.users.index')
-                        ->with('success', 'User berhasil dihapus.');
+                        ->with('success', 'User deleted successfully.');
     }
 
     public function verifyEmail(User $user)
@@ -150,7 +172,7 @@ class UserController extends Controller
         if ($user->email_verified_at) {
             return response()->json([
                 'success' => false,
-                'message' => 'Email sudah terverifikasi'
+                'message' => 'Email already verified'
             ]);
         }
 
@@ -158,7 +180,7 @@ class UserController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Email berhasil diverifikasi'
+            'message' => 'Email verified successfully'
         ]);
     }
 }

@@ -1,144 +1,237 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Produk')
-@section('page-title', 'Manajemen Produk')
+@section('title', 'Products')
+@section('page-title', 'Products')
+@section('page-description', 'Manage your product catalog: add, edit, set prices, stock, and status')
 
 @section('content')
 <div class="space-y-6">
-    <!-- Header & Actions -->
-    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <h2 class="text-2xl font-bold text-gray-800">Daftar Produk</h2>
-        @can('product.create')
-        <a href="{{ route('admin.products.create') }}" 
-           class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-150 ease-in-out inline-flex items-center">
-            <i class="fas fa-plus mr-2"></i>Tambah Produk
-        </a>
-        @endcan
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Total Products -->
+        <div class="bg-white rounded-xl p-5 border border-gray-200">
+            <div class="text-xs text-gray-500 mb-1">Total Products</div>
+            <div class="text-3xl font-bold text-gray-900 mb-1">{{ $stats['total_products'] ?? 0 }}</div>
+            <div class="text-xs text-gray-500">All products</div>
+        </div>
+
+        <!-- Active Products -->
+        <div class="bg-white rounded-xl p-5 border border-gray-200">
+            <div class="text-xs text-gray-500 mb-1">Active Products</div>
+            <div class="text-3xl font-bold text-gray-900 mb-1">{{ $stats['active_products'] ?? 0 }}</div>
+            <div class="text-xs text-gray-500">Currently active</div>
+        </div>
+
+        <!-- Low Stock -->
+        <div class="bg-white rounded-xl p-5 border border-gray-200">
+            <div class="text-xs text-gray-500 mb-1">Low Stock</div>
+            <div class="text-3xl font-bold text-gray-900 mb-1">{{ $stats['low_stock'] ?? 0 }}</div>
+            <div class="text-xs text-gray-500">Need restock</div>
+        </div>
+
+        <!-- Featured Products -->
+        <div class="bg-white rounded-xl p-5 border border-gray-200">
+            <div class="text-xs text-gray-500 mb-1">Featured</div>
+            <div class="text-3xl font-bold text-gray-900 mb-1">{{ $stats['featured_products'] ?? 0 }}</div>
+            <div class="text-xs text-gray-500">Featured products</div>
+        </div>
     </div>
 
-    <!-- Filters -->
-    <div class="bg-white rounded-xl shadow-sm p-6">
-        <form method="GET" action="{{ route('admin.products.index') }}" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <!-- Search -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Cari</label>
-                    <input type="text" 
-                           name="search" 
-                           value="{{ $request->search }}"
-                           placeholder="Nama, SKU, atau deskripsi..."
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+    <!-- Table Container -->
+    <div class="bg-white rounded-xl border border-gray-200">
+        <!-- Filter Bar -->
+        <div class="p-6 border-b border-gray-200">
+            <form method="GET" action="{{ route('admin.products.index') }}" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                    <!-- Search -->
+                    <div class="md:col-span-2">
+                        <input type="text" 
+                               name="search" 
+                               value="{{ $request->search }}"
+                               placeholder="Search name, SKU, or description..."
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent">
+                    </div>
+
+                    <!-- Category Filter -->
+                    <div class="relative" x-data="{ open: false }">
+                        <button type="button"
+                                @click="open = !open"
+                                class="w-full inline-flex items-center justify-between gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white">
+                            <span class="text-sm text-gray-700 truncate">
+                                @if($request->category)
+                                    {{ $categories->find($request->category)?->name ?? 'All Categories' }}
+                                @else
+                                    All Categories
+                                @endif
+                            </span>
+                            <i class="fas fa-chevron-down text-xs text-gray-500 flex-shrink-0"></i>
+                        </button>
+                        
+                        <div x-show="open"
+                             @click.away="open = false"
+                             class="absolute left-0 mt-2 w-full bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 max-h-60 overflow-y-auto"
+                             style="display: none;">
+                            <a href="{{ route('admin.products.index', array_merge(request()->except('category'), ['category' => ''])) }}"
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">All Categories</a>
+                            @foreach($categories as $category)
+                            <a href="{{ route('admin.products.index', array_merge(request()->except('category'), ['category' => $category->id])) }}"
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 {{ $request->category == $category->id ? 'bg-gray-50 font-medium' : '' }}">
+                                {{ $category->name }}
+                            </a>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="relative" x-data="{ open: false }">
+                        <button type="button"
+                                @click="open = !open"
+                                class="w-full inline-flex items-center justify-between gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white">
+                            <span class="text-sm text-gray-700">
+                                @if($request->status === '1')
+                                    Active
+                                @elseif($request->status === '0')
+                                    Inactive
+                                @else
+                                    All Status
+                                @endif
+                            </span>
+                            <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                        </button>
+                        
+                        <div x-show="open"
+                             @click.away="open = false"
+                             class="absolute left-0 mt-2 w-full bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10"
+                             style="display: none;">
+                            <a href="{{ route('admin.products.index', array_merge(request()->except('status'), ['status' => ''])) }}"
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">All Status</a>
+                            <a href="{{ route('admin.products.index', array_merge(request()->except('status'), ['status' => '1'])) }}"
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Active</a>
+                            <a href="{{ route('admin.products.index', array_merge(request()->except('status'), ['status' => '0'])) }}"
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Inactive</a>
+                        </div>
+                    </div>
+
+                    <!-- Stock Filter -->
+                    <div class="relative" x-data="{ open: false }">
+                        <button type="button"
+                                @click="open = !open"
+                                class="w-full inline-flex items-center justify-between gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white">
+                            <span class="text-sm text-gray-700">
+                                @if($request->stock_status === 'in_stock')
+                                    In Stock
+                                @elseif($request->stock_status === 'low_stock')
+                                    Low Stock
+                                @elseif($request->stock_status === 'out_of_stock')
+                                    Out of Stock
+                                @else
+                                    All Stock
+                                @endif
+                            </span>
+                            <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                        </button>
+                        
+                        <div x-show="open"
+                             @click.away="open = false"
+                             class="absolute left-0 mt-2 w-full bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10"
+                             style="display: none;">
+                            <a href="{{ route('admin.products.index', array_merge(request()->except('stock_status'), ['stock_status' => ''])) }}"
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">All Stock</a>
+                            <a href="{{ route('admin.products.index', array_merge(request()->except('stock_status'), ['stock_status' => 'in_stock'])) }}"
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">In Stock</a>
+                            <a href="{{ route('admin.products.index', array_merge(request()->except('stock_status'), ['stock_status' => 'low_stock'])) }}"
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Low Stock</a>
+                            <a href="{{ route('admin.products.index', array_merge(request()->except('stock_status'), ['stock_status' => 'out_of_stock'])) }}"
+                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Out of Stock</a>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Category -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
-                    <select name="category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">Semua Kategori</option>
-                        @foreach($categories as $category)
-                        <option value="{{ $category->id }}" {{ $request->category == $category->id ? 'selected' : '' }}>
-                            {{ $category->name }}
-                        </option>
-                        @endforeach
-                    </select>
+                <div class="flex items-center gap-3">
+                    <!-- Search Button -->
+                    <button type="submit" 
+                            class="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
+                        <i class="fas fa-search"></i>
+                    </button>
+
+                    <!-- Reset Button -->
+                    @if($request->search || $request->category || $request->status || $request->stock_status)
+                    <a href="{{ route('admin.products.index') }}" 
+                       class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                        <i class="fas fa-times"></i>
+                    </a>
+                    @endif
+
+                    <div class="flex-1"></div>
+
+                    <!-- Add Product Button -->
+                    <a href="{{ route('admin.products.create') }}" 
+                       class="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
+                        <i class="fas fa-plus"></i>
+                        <span class="text-sm font-medium">Add Product</span>
+                    </a>
+
+                    <!-- Export Button -->
+                    <a href="{{ route('admin.products.index', array_merge(request()->all(), ['export' => 'excel'])) }}" 
+                       class="p-2 hover:bg-gray-100 rounded-lg transition-colors" 
+                       title="Export to Excel">
+                        <i class="fas fa-download text-gray-600"></i>
+                    </a>
                 </div>
+            </form>
+        </div>
 
-                <!-- Status -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">Semua Status</option>
-                        <option value="1" {{ $request->status === '1' ? 'selected' : '' }}>Aktif</option>
-                        <option value="0" {{ $request->status === '0' ? 'selected' : '' }}>Tidak Aktif</option>
-                    </select>
-                </div>
-
-                <!-- Stock Status -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Stok</label>
-                    <select name="stock_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">Semua Stok</option>
-                        <option value="in_stock" {{ $request->stock_status === 'in_stock' ? 'selected' : '' }}>Tersedia</option>
-                        <option value="low_stock" {{ $request->stock_status === 'low_stock' ? 'selected' : '' }}>Stok Menipis</option>
-                        <option value="out_of_stock" {{ $request->stock_status === 'out_of_stock' ? 'selected' : '' }}>Habis</option>
-                    </select>
-                </div>
-
-                <!-- Sort -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Urutkan</label>
-                    <select name="sort_by" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <option value="created_at" {{ $request->sort_by === 'created_at' ? 'selected' : '' }}>Terbaru</option>
-                        <option value="name" {{ $request->sort_by === 'name' ? 'selected' : '' }}>Nama</option>
-                        <option value="price" {{ $request->sort_by === 'price' ? 'selected' : '' }}>Harga</option>
-                        <option value="stock" {{ $request->sort_by === 'stock' ? 'selected' : '' }}>Stok</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="flex items-center space-x-4">
-                <button type="submit" 
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-150">
-                    <i class="fas fa-search mr-1"></i>Filter
-                </button>
-                <a href="{{ route('admin.products.index') }}" 
-                   class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-150">
-                    Reset
-                </a>
-            </div>
-        </form>
-    </div>
-
-    <!-- Bulk Actions -->
-    <div class="bg-white rounded-xl shadow-sm p-4" id="bulk-actions" style="display: none;">
-        <form id="bulk-form" method="POST" action="{{ route('admin.products.bulk-action') }}">
-            @csrf
-            <div class="flex items-center space-x-4">
-                <span class="text-sm font-medium text-gray-700">Aksi untuk <span id="selected-count">0</span> produk:</span>
-                <select name="action" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">Pilih Aksi</option>
-                    <option value="activate">Aktifkan</option>
-                    <option value="deactivate">Nonaktifkan</option>
-                    <option value="feature">Jadikan Featured</option>
-                    <option value="unfeature">Hapus dari Featured</option>
-                    <option value="delete">Hapus</option>
+        <!-- Bulk Actions Bar -->
+        <div id="bulk-actions" 
+             class="px-6 py-4 bg-blue-50 border-b border-blue-200 hidden">
+            <form id="bulk-form" method="POST" action="{{ route('admin.products.bulk-action') }}" class="flex items-center gap-4">
+                @csrf
+                <span class="text-sm font-medium text-blue-900">
+                    <span id="selected-count">0</span> products selected
+                </span>
+                
+                <select name="action" 
+                        class="px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-600 bg-white text-sm">
+                    <option value="">Select Action</option>
+                    <option value="activate">Activate</option>
+                    <option value="deactivate">Deactivate</option>
+                    <option value="feature">Set as Featured</option>
+                    <option value="unfeature">Remove from Featured</option>
+                    <option value="delete">Delete</option>
                 </select>
+                
                 <button type="submit" 
-                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-150"
-                        onclick="return confirm('Apakah Anda yakin?')">
-                    Jalankan
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                        onclick="return confirm('Are you sure you want to perform this action?')">
+                    Apply
                 </button>
+                
                 <button type="button" 
                         onclick="clearSelection()"
-                        class="text-gray-500 hover:text-gray-700">
-                    Batal
+                        class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                    Clear Selection
                 </button>
-            </div>
-        </form>
-    </div>
+            </form>
+        </div>
 
-    <!-- Products Grid -->
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
         @if($products->count() > 0)
-        <div class="p-4 border-b border-gray-200">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <label class="flex items-center">
-                        <input type="checkbox" 
-                               id="select-all" 
-                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                        <span class="ml-2 text-sm text-gray-700">Pilih Semua</span>
-                    </label>
-                </div>
-                <div class="text-sm text-gray-600">
-                    Menampilkan {{ $products->firstItem() }} - {{ $products->lastItem() }} dari {{ $products->total() }} produk
-                </div>
+        <!-- Select All Bar -->
+        <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" 
+                       id="select-all" 
+                       class="rounded border-gray-300 text-gray-900 focus:ring-gray-900">
+                <span class="ml-2 text-sm font-medium text-gray-700">Select All</span>
+            </label>
+            <div class="text-sm text-gray-600">
+                Showing {{ $products->firstItem() }} - {{ $products->lastItem() }} of {{ $products->total() }} products
             </div>
         </div>
 
+        <!-- Products Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 p-6">
             @foreach($products as $product)
-            <div class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition duration-150 product-card">
+            <div class="border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all product-card">
                 <!-- Product Image -->
                 <div class="relative h-48 bg-gray-100">
                     @if($product->images && count($product->images) > 0)
@@ -147,20 +240,31 @@
                          class="w-full h-full object-cover">
                     @else
                     <div class="w-full h-full flex items-center justify-center">
-                        <i class="fas fa-box text-4xl text-gray-400"></i>
+                        <i class="fas fa-box text-4xl text-gray-300"></i>
                     </div>
                     @endif
                     
                     <!-- Badges -->
-                    <div class="absolute top-2 left-2 space-y-1">
+                    <div class="absolute top-2 left-2 flex flex-col gap-1">
                         @if($product->is_featured)
-                        <span class="inline-block bg-yellow-500 text-white text-xs px-2 py-1 rounded">Featured</span>
+                        <span class="inline-flex items-center gap-1 bg-yellow-500 text-white text-xs px-2 py-1 rounded font-medium">
+                            <i class="fas fa-star"></i> Featured
+                        </span>
                         @endif
                         @if(!$product->is_active)
-                        <span class="inline-block bg-red-500 text-white text-xs px-2 py-1 rounded">Tidak Aktif</span>
+                        <span class="inline-flex items-center gap-1 bg-red-500 text-white text-xs px-2 py-1 rounded font-medium">
+                            <i class="fas fa-times-circle"></i> Inactive
+                        </span>
                         @endif
-                        @if($product->manage_stock && $product->stock <= $product->min_stock)
-                        <span class="inline-block bg-orange-500 text-white text-xs px-2 py-1 rounded">Stok Menipis</span>
+                        @if($product->manage_stock && $product->stock <= $product->min_stock && $product->stock > 0)
+                        <span class="inline-flex items-center gap-1 bg-orange-500 text-white text-xs px-2 py-1 rounded font-medium">
+                            <i class="fas fa-exclamation-triangle"></i> Low Stock
+                        </span>
+                        @endif
+                        @if($product->manage_stock && $product->stock == 0)
+                        <span class="inline-flex items-center gap-1 bg-red-600 text-white text-xs px-2 py-1 rounded font-medium">
+                            <i class="fas fa-ban"></i> Out of Stock
+                        </span>
                         @endif
                     </div>
 
@@ -169,25 +273,25 @@
                         <input type="checkbox" 
                                name="product_ids[]" 
                                value="{{ $product->id }}"
-                               class="product-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded bg-white">
+                               class="product-checkbox h-5 w-5 rounded border-gray-300 text-gray-900 focus:ring-gray-900 bg-white shadow-sm">
                     </div>
                 </div>
 
                 <!-- Product Info -->
                 <div class="p-4">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="text-lg font-semibold text-gray-900 line-clamp-2">{{ $product->name }}</h3>
+                    <div class="mb-2">
+                        <h3 class="text-base font-semibold text-gray-900 line-clamp-2 mb-1">{{ $product->name }}</h3>
+                        <p class="text-xs text-gray-500">{{ $product->category->name }}</p>
                     </div>
                     
-                    <p class="text-sm text-gray-600 mb-2">{{ $product->category->name }}</p>
-                    <p class="text-sm text-gray-500 mb-3 line-clamp-2">{{ Str::limit($product->short_description, 80) }}</p>
+                    <p class="text-xs text-gray-600 mb-3 line-clamp-2">{{ Str::limit($product->short_description, 80) }}</p>
                     
                     <!-- Price -->
                     <div class="mb-3">
                         @if($product->sale_price)
-                        <div class="flex items-center space-x-2">
+                        <div class="flex items-center gap-2">
                             <span class="text-lg font-bold text-green-600">Rp {{ number_format($product->sale_price, 0, ',', '.') }}</span>
-                            <span class="text-sm text-gray-500 line-through">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
+                            <span class="text-xs text-gray-400 line-through">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
                         </div>
                         @else
                         <span class="text-lg font-bold text-gray-900">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
@@ -195,50 +299,50 @@
                     </div>
 
                     <!-- Stock & SKU -->
-                    <div class="flex justify-between items-center text-sm mb-4">
+                    <div class="flex justify-between items-center text-xs mb-4 pb-4 border-b border-gray-100">
                         <span class="text-gray-600">SKU: {{ $product->sku }}</span>
                         @if($product->manage_stock)
-                        <span class="text-gray-600">Stok: {{ $product->stock }}</span>
+                        <span class="font-medium {{ $product->stock > 0 ? 'text-gray-900' : 'text-red-600' }}">
+                            Stock: {{ $product->stock }}
+                        </span>
                         @else
-                        <span class="text-green-600">Unlimited</span>
+                        <span class="text-green-600 font-medium">Unlimited</span>
                         @endif
                     </div>
 
                     <!-- Actions -->
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-2">
+                        <div class="flex items-center gap-3">
                             <a href="{{ route('admin.products.show', $product) }}" 
-                               class="text-blue-600 hover:text-blue-700">
+                               class="text-gray-600 hover:text-gray-900 transition-colors"
+                               title="View">
                                 <i class="fas fa-eye"></i>
                             </a>
-                            @can('product.edit')
                             <a href="{{ route('admin.products.edit', $product) }}" 
-                               class="text-yellow-600 hover:text-yellow-700">
+                               class="text-gray-600 hover:text-gray-900 transition-colors"
+                               title="Edit">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            @endcan
-                            @can('product.delete')
                             <form action="{{ route('admin.products.destroy', $product) }}" 
                                   method="POST" 
                                   class="inline"
-                                  onsubmit="return confirm('Apakah Anda yakin ingin menghapus produk ini?')">
+                                  onsubmit="return confirm('Are you sure you want to delete this product?')">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" 
-                                        class="text-red-600 hover:text-red-700">
+                                        class="text-red-600 hover:text-red-900 transition-colors"
+                                        title="Delete">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </form>
-                            @endcan
                         </div>
                         
-                        <!-- Status Toggle -->
-                        <div class="flex items-center">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
-                                {{ $product->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                {{ $product->is_active ? 'Aktif' : 'Tidak Aktif' }}
-                            </span>
-                        </div>
+                        <!-- Status Badge -->
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg 
+                            {{ $product->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                            <i class="fas fa-circle text-[6px]"></i>
+                            {{ $product->is_active ? 'Active' : 'Inactive' }}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -248,22 +352,63 @@
         <!-- Pagination -->
         @if($products->hasPages())
         <div class="px-6 py-4 border-t border-gray-200">
-            {{ $products->links() }}
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-600">
+                    Showing {{ $products->firstItem() }}-{{ $products->lastItem() }} of {{ $products->total() }}
+                </div>
+
+                <div class="flex items-center gap-1">
+                    @if($products->onFirstPage())
+                        <button disabled class="px-3 py-2 text-gray-400 cursor-not-allowed">
+                            <i class="fas fa-chevron-left text-sm"></i>
+                        </button>
+                    @else
+                        <a href="{{ $products->previousPageUrl() }}" class="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                            <i class="fas fa-chevron-left text-sm"></i>
+                        </a>
+                    @endif
+
+                    @foreach($products->getUrlRange(1, $products->lastPage()) as $page => $url)
+                        @if($page == $products->currentPage())
+                            <button class="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium">{{ $page }}</button>
+                        @elseif($page == 1 || $page == $products->lastPage() || abs($page - $products->currentPage()) <= 2)
+                            <a href="{{ $url }}" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">{{ $page }}</a>
+                        @elseif($page == 2 || $page == $products->lastPage() - 1)
+                            <span class="px-2 text-gray-400">...</span>
+                        @endif
+                    @endforeach
+
+                    @if($products->hasMorePages())
+                        <a href="{{ $products->nextPageUrl() }}" class="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                            <i class="fas fa-chevron-right text-sm"></i>
+                        </a>
+                    @else
+                        <button disabled class="px-3 py-2 text-gray-400 cursor-not-allowed">
+                            <i class="fas fa-chevron-right text-sm"></i>
+                        </button>
+                    @endif
+                </div>
+            </div>
         </div>
         @endif
 
         @else
         <div class="p-12 text-center">
             <div class="text-gray-500">
-                <i class="fas fa-inbox text-6xl mb-4"></i>
-                <h3 class="text-lg font-medium mb-2">Tidak ada produk</h3>
-                <p class="text-gray-400 mb-4">Belum ada produk yang ditambahkan atau tidak ada yang sesuai dengan filter.</p>
-                @can('product.create')
+                <i class="fas fa-box-open text-5xl mb-4 text-gray-300"></i>
+                <h3 class="text-lg font-medium mb-2">No products found</h3>
+                <p class="text-sm text-gray-400 mb-6">
+                    @if(request()->hasAny(['search', 'category', 'status', 'stock_status']))
+                        Try adjusting your filters or search query.
+                    @else
+                        Start by adding your first product to the catalog.
+                    @endif
+                </p>
                 <a href="{{ route('admin.products.create') }}" 
-                   class="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                    Tambah Produk Pertama
+                   class="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
+                    <i class="fas fa-plus"></i>
+                    <span>Add First Product</span>
                 </a>
-                @endcan
             </div>
         </div>
         @endif
@@ -279,24 +424,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedCount = document.getElementById('selected-count');
     const bulkForm = document.getElementById('bulk-form');
 
-    // Select all functionality
-    selectAll.addEventListener('change', function() {
-        productCheckboxes.forEach(checkbox => {
-            checkbox.checked = this.checked;
+    if (selectAll) {
+        // Select all functionality
+        selectAll.addEventListener('change', function() {
+            productCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateBulkActions();
         });
-        updateBulkActions();
-    });
 
-    // Individual checkbox functionality
-    productCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateBulkActions);
-    });
+        // Individual checkbox functionality
+        productCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateBulkActions);
+        });
+    }
 
     function updateBulkActions() {
         const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
         
         if (checkedBoxes.length > 0) {
-            bulkActions.style.display = 'block';
+            bulkActions.classList.remove('hidden');
             selectedCount.textContent = checkedBoxes.length;
             
             // Add hidden inputs for selected products
@@ -311,20 +458,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 bulkForm.appendChild(input);
             });
         } else {
-            bulkActions.style.display = 'none';
+            bulkActions.classList.add('hidden');
         }
         
         // Update select all checkbox
-        selectAll.checked = checkedBoxes.length === productCheckboxes.length;
-        selectAll.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < productCheckboxes.length;
+        if (selectAll) {
+            selectAll.checked = checkedBoxes.length === productCheckboxes.length;
+            selectAll.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < productCheckboxes.length;
+        }
     }
 
     window.clearSelection = function() {
         productCheckboxes.forEach(checkbox => {
             checkbox.checked = false;
         });
-        selectAll.checked = false;
-        bulkActions.style.display = 'none';
+        if (selectAll) selectAll.checked = false;
+        bulkActions.classList.add('hidden');
     };
 });
 </script>

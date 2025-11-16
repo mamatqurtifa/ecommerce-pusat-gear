@@ -7,7 +7,10 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Laravel\Facades\Image;
+use App\Exports\ProductsExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class ProductController extends Controller
 {
@@ -29,7 +32,7 @@ class ProductController extends Controller
         if ($request->has('stock_status')) {
             switch ($request->stock_status) {
                 case 'low_stock':
-                    $query->where('manage_stock', true)->whereColumn('stock', '<=', 'min_stock');
+                    $query->where('manage_stock', true)->whereColumn('stock', '<=', 'min_stock')->where('stock', '>', 0);
                     break;
                 case 'out_of_stock':
                     $query->where('manage_stock', true)->where('stock', 0);
@@ -60,10 +63,27 @@ class ProductController extends Controller
         $sortDir = $request->get('sort_dir', 'desc');
         $query->orderBy($sortBy, $sortDir);
 
+        // Handle Export
+        if ($request->has('export') && $request->export === 'excel') {
+            $products = $query->get();
+            return Excel::download(new ProductsExport($products), 'products-' . date('Y-m-d') . '.xlsx');
+        }
+
         $products = $query->paginate(12)->withQueryString();
         $categories = Category::active()->get();
 
-        return view('admin.products.index', compact('products', 'categories', 'request'));
+        // Statistics
+        $stats = [
+            'total_products' => Product::count(),
+            'active_products' => Product::where('is_active', true)->count(),
+            'low_stock' => Product::where('manage_stock', true)
+                                 ->whereColumn('stock', '<=', 'min_stock')
+                                 ->where('stock', '>', 0)
+                                 ->count(),
+            'featured_products' => Product::where('is_featured', true)->count(),
+        ];
+
+        return view('admin.products.index', compact('products', 'categories', 'request', 'stats'));
     }
 
     public function create()
@@ -100,15 +120,14 @@ class ProductController extends Controller
         // Handle images upload
         if ($request->hasFile('images')) {
             $imagePaths = [];
+            $manager = new ImageManager(new Driver());
+            
             foreach ($request->file('images') as $image) {
                 $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
                 
-                // Resize and save image
-                $resizedImage = Image::read($image->getPathname())
-                                     ->resize(800, 800, function ($constraint) {
-                                         $constraint->aspectRatio();
-                                         $constraint->upsize();
-                                     });
+                // Resize and save image with v3 syntax
+                $resizedImage = $manager->read($image->getPathname());
+                $resizedImage->scale(width: 800, height: 800);
                 
                 $imagePath = 'products/' . $imageName;
                 Storage::disk('public')->put($imagePath, $resizedImage->encode());
@@ -120,7 +139,7 @@ class ProductController extends Controller
         $product->save();
 
         return redirect()->route('admin.products.index')
-                        ->with('success', 'Produk berhasil ditambahkan.');
+                        ->with('success', 'Product successfully created.');
     }
 
     public function show(Product $product)
@@ -179,15 +198,14 @@ class ProductController extends Controller
             }
 
             $imagePaths = [];
+            $manager = new ImageManager(new Driver());
+            
             foreach ($request->file('images') as $image) {
                 $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
                 
-                // Resize and save image
-                $resizedImage = Image::read($image->getPathname())
-                                     ->resize(800, 800, function ($constraint) {
-                                         $constraint->aspectRatio();
-                                         $constraint->upsize();
-                                     });
+                // Resize and save image with v3 syntax
+                $resizedImage = $manager->read($image->getPathname());
+                $resizedImage->scale(width: 800, height: 800);
                 
                 $imagePath = 'products/' . $imageName;
                 Storage::disk('public')->put($imagePath, $resizedImage->encode());
@@ -199,7 +217,7 @@ class ProductController extends Controller
         $product->save();
 
         return redirect()->route('admin.products.index')
-                        ->with('success', 'Produk berhasil diperbarui.');
+                        ->with('success', 'Product successfully updated.');
     }
 
     public function destroy(Product $product)
@@ -207,7 +225,7 @@ class ProductController extends Controller
         // Check if product has orders
         if ($product->orderItems()->count() > 0) {
             return redirect()->route('admin.products.index')
-                           ->with('error', 'Produk tidak dapat dihapus karena sudah ada dalam pesanan.');
+                           ->with('error', 'Cannot delete product that has order history.');
         }
 
         // Delete images
@@ -222,7 +240,7 @@ class ProductController extends Controller
         $product->delete();
 
         return redirect()->route('admin.products.index')
-                        ->with('success', 'Produk berhasil dihapus.');
+                        ->with('success', 'Product successfully deleted.');
     }
 
     public function bulkAction(Request $request)
@@ -238,26 +256,26 @@ class ProductController extends Controller
         switch ($request->action) {
             case 'activate':
                 $products->update(['is_active' => true]);
-                $message = 'Produk berhasil diaktifkan.';
+                $message = 'Products successfully activated.';
                 break;
             case 'deactivate':
                 $products->update(['is_active' => false]);
-                $message = 'Produk berhasil dinonaktifkan.';
+                $message = 'Products successfully deactivated.';
                 break;
             case 'feature':
                 $products->update(['is_featured' => true]);
-                $message = 'Produk berhasil dijadikan featured.';
+                $message = 'Products successfully set as featured.';
                 break;
             case 'unfeature':
                 $products->update(['is_featured' => false]);
-                $message = 'Produk berhasil dihapus dari featured.';
+                $message = 'Products successfully removed from featured.';
                 break;
             case 'delete':
                 // Check if any product has orders
                 $hasOrders = $products->whereHas('orderItems')->exists();
                 if ($hasOrders) {
                     return redirect()->route('admin.products.index')
-                                   ->with('error', 'Beberapa produk tidak dapat dihapus karena sudah ada dalam pesanan.');
+                                   ->with('error', 'Some products cannot be deleted because they have order history.');
                 }
                 
                 // Delete images and products
@@ -272,7 +290,7 @@ class ProductController extends Controller
                     }
                 }
                 $products->delete();
-                $message = 'Produk berhasil dihapus.';
+                $message = 'Products successfully deleted.';
                 break;
         }
 

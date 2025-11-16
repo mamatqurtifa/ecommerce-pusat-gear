@@ -1,26 +1,38 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Detail Pengguna')
-@section('page-title', 'Detail Pengguna: ' . $user->name)
+@section('title', 'User Details')
+@section('page-title', 'User Details: ' . $user->name)
+@section('page-description', 'View comprehensive user information, activity history, and manage account settings.')
 
 @section('content')
 <div class="space-y-6">
-    <!-- User Info Card -->
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200">
+    <!-- Back Button -->
+    <div>
+        <a href="{{ route('admin.users.index') }}" 
+           class="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
+            <i class="fas fa-arrow-left"></i>
+            <span class="text-sm font-medium">Back to Users</span>
+        </a>
+    </div>
+
+    <!-- User Profile Card -->
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-200">
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-800">{{ $user->name }}</h3>
-                    <p class="text-sm text-gray-600">{{ $user->email }}</p>
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-2xl text-gray-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-900">{{ $user->name }}</h3>
+                        <p class="text-sm text-gray-600">{{ $user->email }}</p>
+                    </div>
                 </div>
-                <div class="flex items-center space-x-2">
+                <div class="flex items-center gap-2">
                     <a href="{{ route('admin.users.edit', $user) }}" 
-                       class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm transition duration-150">
-                        <i class="fas fa-edit mr-1"></i>Edit
-                    </a>
-                    <a href="{{ route('admin.users.index') }}" 
-                       class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm transition duration-150">
-                        <i class="fas fa-arrow-left mr-1"></i>Kembali
+                       class="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
+                        <i class="fas fa-edit"></i>
+                        <span class="text-sm font-medium">Edit User</span>
                     </a>
                 </div>
             </div>
@@ -28,65 +40,73 @@
         
         <div class="p-6">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Profile Picture & Basic Info -->
+                <!-- Profile Section -->
                 <div class="lg:col-span-1">
                     <div class="text-center">
-                        <div class="w-24 h-24 mx-auto mb-4 bg-gray-300 rounded-full flex items-center justify-center">
-                            <i class="fas fa-user text-3xl text-gray-600"></i>
+                        <div class="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user text-3xl text-gray-400"></i>
                         </div>
-                        <h4 class="text-xl font-bold text-gray-900 mb-2">{{ $user->name }}</h4>
-                        <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full {{ 
-                            $user->hasRole('super-admin') ? 'bg-purple-100 text-purple-800' : 
-                            ($user->hasRole('admin') ? 'bg-blue-100 text-blue-800' : 
-                            ($user->hasRole('staff') ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800')) 
+                        <h4 class="text-lg font-semibold text-gray-900 mb-2">{{ $user->name }}</h4>
+                        <span class="inline-flex px-3 py-1 text-xs font-medium rounded-full {{ 
+                            $user->hasRole('super-admin') ? 'bg-purple-100 text-purple-700' : 
+                            ($user->hasRole('admin') ? 'bg-blue-100 text-blue-700' : 
+                            ($user->hasRole('staff') ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700')) 
                         }}">
-                            {{ ucfirst($user->roles->first()?->name ?? 'No Role') }}
+                            {{ ucfirst($user->roles->first()?->name ?? 'Customer') }}
                         </span>
                     </div>
                 </div>
                 
-                <!-- Detailed Info -->
+                <!-- Contact & Account Info -->
                 <div class="lg:col-span-2 space-y-6">
                     <!-- Contact Information -->
                     <div>
-                        <h5 class="text-md font-semibold text-gray-800 mb-4">Informasi Kontak</h5>
+                        <h5 class="text-sm font-semibold text-gray-900 mb-4">Contact Information</h5>
                         <div class="space-y-3">
-                            <div class="flex items-center">
-                                <i class="fas fa-envelope w-5 text-gray-400 mr-3"></i>
-                                <span class="text-gray-900">{{ $user->email }}</span>
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-envelope w-4 text-gray-400"></i>
+                                <span class="text-sm text-gray-900">{{ $user->email }}</span>
                                 @if($user->email_verified_at)
-                                <span class="ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                    <i class="fas fa-check mr-1"></i>Verified
+                                <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                                    <i class="fas fa-check"></i>Verified
                                 </span>
                                 @else
-                                <span class="ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                    <i class="fas fa-exclamation mr-1"></i>Unverified
+                                <span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">
+                                    <i class="fas fa-exclamation"></i>Unverified
                                 </span>
                                 @endif
                             </div>
-                            <div class="flex items-center">
-                                <i class="fas fa-phone w-5 text-gray-400 mr-3"></i>
-                                <span class="text-gray-900">{{ $user->phone }}</span>
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-phone w-4 text-gray-400"></i>
+                                <span class="text-sm text-gray-900">{{ $user->phone }}</span>
                             </div>
-                            <div class="flex items-start">
-                                <i class="fas fa-map-marker-alt w-5 text-gray-400 mr-3 mt-1"></i>
-                                <span class="text-gray-900">{{ $user->address }}</span>
+                            <div class="flex items-start gap-3">
+                                <i class="fas fa-map-marker-alt w-4 text-gray-400 mt-0.5"></i>
+                                <span class="text-sm text-gray-900">{{ $user->address }}</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Account Information -->
                     <div>
-                        <h5 class="text-md font-semibold text-gray-800 mb-4">Informasi Akun</h5>
+                        <h5 class="text-sm font-semibold text-gray-900 mb-4">Account Information</h5>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <p class="text-sm text-gray-600">Bergabung</p>
-                                <p class="font-medium text-gray-900">{{ $user->created_at->format('d F Y, H:i') }}</p>
+                                <p class="text-xs text-gray-600 mb-1">User ID</p>
+                                <p class="text-sm font-medium text-gray-900">USR-{{ str_pad($user->id, 4, '0', STR_PAD_LEFT) }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-600 mb-1">Total Orders</p>
+                                <p class="text-sm font-medium text-gray-900">{{ number_format($user->orders()->count()) }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-600 mb-1">Joined</p>
+                                <p class="text-sm font-medium text-gray-900">{{ $user->created_at->format('d M Y') }}</p>
                                 <p class="text-xs text-gray-500">{{ $user->created_at->diffForHumans() }}</p>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-600">Terakhir Update</p>
-                                <p class="font-medium text-gray-900">{{ $user->updated_at->format('d F Y, H:i') }}</p>
+                                <p class="text-xs text-gray-600 mb-1">Last Updated</p>
+                                <p class="text-sm font-medium text-gray-900">{{ $user->updated_at->format('d M Y') }}</p>
                                 <p class="text-xs text-gray-500">{{ $user->updated_at->diffForHumans() }}</p>
                             </div>
                         </div>
@@ -97,128 +117,117 @@
     </div>
 
     <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="bg-blue-50 rounded-xl p-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl p-5 border border-gray-200">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-blue-600 text-sm font-medium">Total Pesanan</p>
-                    <p class="text-3xl font-bold text-blue-600">{{ number_format($stats['total_orders']) }}</p>
+                    <div class="text-xs text-gray-600 mb-1">Total Orders</div>
+                    <div class="text-2xl font-bold text-gray-900">{{ number_format($stats['total_orders']) }}</div>
                 </div>
-                <div class="bg-blue-100 rounded-full p-3">
-                    <i class="fas fa-shopping-cart text-blue-600 text-xl"></i>
+                <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
+                    <i class="fas fa-shopping-cart text-blue-600"></i>
                 </div>
             </div>
         </div>
 
-        <div class="bg-green-50 rounded-xl p-6">
+        <div class="bg-white rounded-xl p-5 border border-gray-200">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-green-600 text-sm font-medium">Total Belanja</p>
-                    <p class="text-3xl font-bold text-green-600">Rp {{ number_format($stats['total_spent'], 0, ',', '.') }}</p>
+                    <div class="text-xs text-gray-600 mb-1">Total Spent</div>
+                    <div class="text-2xl font-bold text-gray-900">Rp {{ number_format($stats['total_spent'], 0, ',', '.') }}</div>
                 </div>
-                <div class="bg-green-100 rounded-full p-3">
-                    <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
+                <div class="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center">
+                    <i class="fas fa-money-bill-wave text-green-600"></i>
                 </div>
             </div>
         </div>
 
-        <div class="bg-yellow-50 rounded-xl p-6">
+        <div class="bg-white rounded-xl p-5 border border-gray-200">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-yellow-600 text-sm font-medium">Pesanan Pending</p>
-                    <p class="text-3xl font-bold text-yellow-600">{{ number_format($stats['pending_orders']) }}</p>
+                    <div class="text-xs text-gray-600 mb-1">Pending Orders</div>
+                    <div class="text-2xl font-bold text-gray-900">{{ number_format($stats['pending_orders']) }}</div>
                 </div>
-                <div class="bg-yellow-100 rounded-full p-3">
-                    <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                <div class="w-12 h-12 bg-yellow-50 rounded-full flex items-center justify-center">
+                    <i class="fas fa-clock text-yellow-600"></i>
                 </div>
             </div>
         </div>
 
-        <div class="bg-purple-50 rounded-xl p-6">
+        <div class="bg-white rounded-xl p-5 border border-gray-200">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-purple-600 text-sm font-medium">Pesanan Selesai</p>
-                    <p class="text-3xl font-bold text-purple-600">{{ number_format($stats['completed_orders']) }}</p>
+                    <div class="text-xs text-gray-600 mb-1">Completed Orders</div>
+                    <div class="text-2xl font-bold text-gray-900">{{ number_format($stats['completed_orders']) }}</div>
                 </div>
-                <div class="bg-purple-100 rounded-full p-3">
-                    <i class="fas fa-check-circle text-purple-600 text-xl"></i>
+                <div class="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check-circle text-purple-600"></i>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Recent Orders -->
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="bg-white rounded-xl border border-gray-200">
         <div class="px-6 py-4 border-b border-gray-200">
             <div class="flex items-center justify-between">
-                <h3 class="text-lg font-semibold text-gray-800">Pesanan Terbaru</h3>
+                <h3 class="text-lg font-semibold text-gray-900">Recent Orders</h3>
                 <a href="{{ route('admin.orders.index', ['user' => $user->id]) }}" 
-                   class="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                    Lihat Semua Pesanan
+                   class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                    View All Orders →
                 </a>
             </div>
         </div>
         
         <div class="overflow-x-auto">
             @if($user->orders->count() > 0)
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Order #
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Total
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Status
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Pembayaran
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Tanggal
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Aksi
-                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order #</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @foreach($user->orders->take(10) as $order)
-                    <tr class="hover:bg-gray-50">
+                    <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <a href="{{ route('admin.orders.show', $order) }}" 
-                               class="text-blue-600 hover:text-blue-700 font-medium">
+                               class="text-sm font-medium text-gray-900 hover:text-gray-700">
                                 {{ $order->order_number }}
                             </a>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="text-gray-900 font-medium">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
+                            <span class="text-sm font-medium text-gray-900">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ 
-                                $order->status === 'delivered' ? 'bg-green-100 text-green-800' : 
-                                ($order->status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                                ($order->status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800')) 
+                            <span class="inline-flex px-3 py-1 text-xs font-medium rounded-full {{ 
+                                $order->status === 'delivered' ? 'bg-green-100 text-green-700' : 
+                                ($order->status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 
+                                ($order->status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700')) 
                             }}">
                                 {{ $order->status_label }}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {{ 
-                                $order->payment_status === 'paid' ? 'bg-green-100 text-green-800' : 
-                                ($order->payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800') 
+                            <span class="inline-flex px-3 py-1 text-xs font-medium rounded-full {{ 
+                                $order->payment_status === 'paid' ? 'bg-green-100 text-green-700' : 
+                                ($order->payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700') 
                             }}">
                                 {{ $order->payment_status_label }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ $order->created_at->format('d/m/Y') }}
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm text-gray-600">{{ $order->created_at->format('d/m/Y') }}</span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td class="px-6 py-4 whitespace-nowrap">
                             <a href="{{ route('admin.orders.show', $order) }}" 
-                               class="text-blue-600 hover:text-blue-700" title="Lihat Detail">
+                               class="text-gray-600 hover:text-gray-900 transition-colors"
+                               title="View Details">
                                 <i class="fas fa-eye"></i>
                             </a>
                         </td>
@@ -227,51 +236,13 @@
                 </tbody>
             </table>
             @else
-            <div class="text-center py-8">
+            <div class="px-6 py-12 text-center">
                 <div class="text-gray-500">
-                    <i class="fas fa-shopping-cart text-4xl mb-4"></i>
-                    <p class="text-lg font-medium mb-2">Belum ada pesanan</p>
-                    <p class="text-gray-400">User ini belum pernah melakukan pemesanan.</p>
+                    <i class="fas fa-shopping-cart text-5xl mb-4 text-gray-300"></i>
+                    <h3 class="text-lg font-medium mb-2">No orders yet</h3>
+                    <p class="text-sm text-gray-400">This user hasn't placed any orders.</p>
                 </div>
             </div>
-            @endif
-        </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="bg-white rounded-xl shadow-sm p-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Aksi Cepat</h3>
-        <div class="flex flex-wrap gap-3">
-            <a href="{{ route('admin.users.edit', $user) }}" 
-               class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-150">
-                <i class="fas fa-edit mr-2"></i>Edit Pengguna
-            </a>
-            
-            @if(!$user->email_verified_at)
-            <button onclick="verifyEmail({{ $user->id }})" 
-                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition duration-150">
-                <i class="fas fa-check mr-2"></i>Verifikasi Email
-            </button>
-            @endif
-            
-            @if($user->id !== auth()->id() && $user->orders()->count() === 0)
-            <form action="{{ route('admin.users.destroy', $user) }}" 
-                  method="POST" 
-                  class="inline"
-                  onsubmit="return confirm('Apakah Anda yakin ingin menghapus user ini?')">
-                @csrf
-                @method('DELETE')
-                <button type="submit" 
-                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition duration-150">
-                    <i class="fas fa-trash mr-2"></i>Hapus Pengguna
-                </button>
-            </form>
-            @elseif($user->id !== auth()->id())
-            <button disabled 
-                    class="bg-gray-400 text-white px-4 py-2 rounded-lg font-medium cursor-not-allowed"
-                    title="User memiliki riwayat pesanan">
-                <i class="fas fa-trash mr-2"></i>Tidak Dapat Dihapus
-            </button>
             @endif
         </div>
     </div>
@@ -280,8 +251,7 @@
 @push('scripts')
 <script>
 function verifyEmail(userId) {
-    if (confirm('Apakah Anda yakin ingin memverifikasi email user ini?')) {
-        // AJAX call untuk verify email - akan dibuat nanti
+    if (confirm('Are you sure you want to verify this user\'s email?')) {
         fetch(`/admin/api/users/${userId}/verify-email`, {
             method: 'POST',
             headers: {
@@ -294,12 +264,12 @@ function verifyEmail(userId) {
             if (data.success) {
                 location.reload();
             } else {
-                alert('Gagal memverifikasi email');
+                alert('Failed to verify email');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Terjadi kesalahan');
+            alert('An error occurred');
         });
     }
 }
